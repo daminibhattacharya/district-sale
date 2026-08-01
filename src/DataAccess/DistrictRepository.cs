@@ -1,5 +1,6 @@
 using Dapper;
 using Domain;
+using Microsoft.Data.SqlClient;
 
 namespace DataAccess;
 
@@ -68,15 +69,51 @@ public sealed class DistrictRepository : IDistrictRepository
         return new District(head.Id, head.Name, new Salesperson(head.PrimaryId, head.PrimaryName), secondaries, stores);
     }
 
-    // The mutations below are each their own test-first increment and land in the following commits.
-    public Task AddSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public async Task AddSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default)
+    {
+        const string sql =
+            "INSERT INTO dbo.DistrictSecondarySalesperson (DistrictId, SalespersonId) " +
+            "VALUES (@districtId, @salespersonId);";
 
-    public Task SetPrimaryAsync(int districtId, int salespersonId, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+        await using var conn = await _connections.CreateOpenConnectionAsync(ct);
+        try
+        {
+            await conn.ExecuteAsync(new CommandDefinition(sql, new { districtId, salespersonId }, cancellationToken: ct));
+        }
+        catch (SqlException ex) when (ex.Number is 2601 or 2627) // unique/PK violation — already a secondary
+        {
+            throw new ConflictException(
+                $"Salesperson {salespersonId} is already a secondary of district {districtId}.");
+        }
+    }
 
-    public Task RemoveSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default) =>
-        throw new NotImplementedException();
+    public async Task SetPrimaryAsync(int districtId, int salespersonId, CancellationToken ct = default)
+    {
+        await using var conn = await _connections.CreateOpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+
+        // Promoting a current secondary must not leave them holding both roles (I2 / BR-7), so drop
+        // the secondary link (a no-op when they were not a secondary) and set the primary — atomically.
+        await conn.ExecuteAsync(new CommandDefinition(
+            "DELETE FROM dbo.DistrictSecondarySalesperson WHERE DistrictId = @districtId AND SalespersonId = @salespersonId;",
+            new { districtId, salespersonId }, tx, cancellationToken: ct));
+
+        await conn.ExecuteAsync(new CommandDefinition(
+            "UPDATE dbo.District SET PrimarySalespersonId = @salespersonId WHERE Id = @districtId;",
+            new { districtId, salespersonId }, tx, cancellationToken: ct));
+
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task RemoveSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default)
+    {
+        const string sql =
+            "DELETE FROM dbo.DistrictSecondarySalesperson " +
+            "WHERE DistrictId = @districtId AND SalespersonId = @salespersonId;";
+
+        await using var conn = await _connections.CreateOpenConnectionAsync(ct);
+        await conn.ExecuteAsync(new CommandDefinition(sql, new { districtId, salespersonId }, cancellationToken: ct));
+    }
 
     // Row shapes used only to carry columns from Dapper into domain objects.
     private sealed record SummaryRow(int Id, string Name, int PrimaryId, string PrimaryName, int StoreCount);
