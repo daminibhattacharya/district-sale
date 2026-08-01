@@ -9,7 +9,20 @@
 }
 
 .app-main {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) 1fr;
+  gap: 1.5rem;
   padding: 1.5rem;
   max-width: 60rem;
   margin: 0 auto;
+}
+
+.pane {
+  min-width: 0;
+}
+
+@media (max-width: 40rem) {
+  .app-main {
+    grid-template-columns: 1fr;
+  }
 }

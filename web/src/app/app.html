@@ -3,10 +3,16 @@
 </header>
 
 <main class="app-main">
-  <app-district-list
-    [districts]="districts()"
-    [loading]="loading()"
-    [selectedId]="selectedId()"
-    (select)="onSelect($event)"
-  />
+  <aside class="pane list-pane">
+    <app-district-list
+      [districts]="districts()"
+      [loading]="loading()"
+      [selectedId]="selectedId()"
+      (select)="onSelect($event)"
+    />
+  </aside>
+
+  <section class="pane detail-pane">
+    <app-district-detail [detail]="detail()" [loading]="detailLoading()" />
+  </section>
 </main>
