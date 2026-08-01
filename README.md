@@ -21,7 +21,7 @@ Serilog · GitHub Actions CI.
 ### Prerequisites
 - .NET SDK 10
 - A SQL Server instance (connection string supplied via config — see below)
-- Node 22 LTS + npm (for the Angular client)
+- Node 24 (or 22 LTS) + npm — for the Angular client in `web/` (Node 23 is unsupported by the toolchain)
 
 ### Configuration
 - **API:** connection string via `ConnectionStrings__Sql` (environment variable or user-secrets — no secrets in Git).
@@ -33,6 +33,16 @@ dotnet build
 dotnet test --filter Category=Unit          # fast, no database
 dotnet test --filter Category=Integration   # requires DISTRICT_SQL_TEST
 ```
+
+### Web client (Angular, in `web/`)
+```bash
+cd web
+npm install
+npm start        # dev server; calls the API at environment.development.ts apiUrl
+npm test         # unit tests (Vitest + jsdom, headless)
+```
+The API base URL comes from `src/environments/environment*.ts` (`apiUrl`) — dev points at the API's
+origin, prod is same-origin. Nothing is hardcoded in the components.
 
 ## Decisions & trade-offs
 
