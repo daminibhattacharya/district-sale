@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Observable, of } from 'rxjs';
+import { of } from 'rxjs';
+import { vi } from 'vitest';
 import { App } from './app';
-import { DistrictDetail, DistrictSummary } from './districts/district.models';
+import { DistrictDetail, DistrictSummary, Salesperson } from './districts/district.models';
 import { DistrictService } from './districts/district.service';
 
 describe('App', () => {
@@ -18,34 +19,61 @@ describe('App', () => {
     concurrencyToken: 'AAAAAAAAB9E=',
   };
 
-  function setup(list: Observable<DistrictSummary[]> = of(districts)): ComponentFixture<App> {
+  const pool: Salesperson[] = [
+    { id: 1, name: 'Anna' },
+    { id: 5, name: 'Emil' },
+    { id: 8, name: 'Helle' },
+  ];
+
+  function setup() {
+    const service = {
+      list: vi.fn().mockReturnValue(of(districts)),
+      detail: vi.fn().mockReturnValue(of(detail)),
+      salespersons: vi.fn().mockReturnValue(of(pool)),
+      putAssignments: vi.fn().mockReturnValue(of({ ...detail, secondaries: [], concurrencyToken: 'NEW' })),
+    };
     TestBed.configureTestingModule({
       imports: [App],
-      providers: [{ provide: DistrictService, useValue: { list: () => list, detail: () => of(detail) } }],
+      providers: [{ provide: DistrictService, useValue: service }],
     });
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
-    return fixture;
+    return { fixture, service };
+  }
+
+  function el(fixture: ComponentFixture<App>): HTMLElement {
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  async function selectFirstDistrict(fixture: ComponentFixture<App>): Promise<void> {
+    await fixture.whenStable();
+    el(fixture).querySelector<HTMLButtonElement>('button.district')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
   }
 
   it('loads districts from the service and renders them', async () => {
-    const fixture = setup();
+    const { fixture } = setup();
     await fixture.whenStable();
-
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('North Denmark');
+    expect(el(fixture).textContent).toContain('North Denmark');
   });
 
   it('loads and shows the detail when a district is selected', async () => {
-    const fixture = setup();
-    await fixture.whenStable();
+    const { fixture } = setup();
+    await selectFirstDistrict(fixture);
+    expect(el(fixture).textContent).toContain('Emil'); // secondary from the detail
+  });
 
-    (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>('button.district')!.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+  it('removing a secondary PUTs the reduced assignment set with the concurrency token', async () => {
+    const { fixture, service } = setup();
+    await selectFirstDistrict(fixture);
 
-    // The detail pane now shows the selected district's secondary and store.
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Emil');
-    expect(text).toContain('Aalborg');
+    el(fixture).querySelector<HTMLButtonElement>('.remove-btn')!.click();
+
+    expect(service.putAssignments).toHaveBeenCalledWith(1, {
+      primaryId: 1,
+      secondaryIds: [],
+      concurrencyToken: 'AAAAAAAAB9E=',
+    });
   });
 });

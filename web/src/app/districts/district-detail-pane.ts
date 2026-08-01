@@ -1,10 +1,13 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { DistrictDetail } from './district.models';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { DistrictDetail, Salesperson } from './district.models';
 
 /**
- * Presentational detail pane: the selected district's primary, secondaries and stores, each with its
- * own empty state. It owns no data — the container passes the loaded detail (or null when nothing is
- * selected yet).
+ * Presentational detail pane for the selected district: primary, secondaries and stores, each with
+ * an empty state, plus the mutation controls. It holds no server state and performs no requests — it
+ * emits intents (add / remove secondary, change primary) that the container turns into a PUT.
+ *
+ * The primary has no "remove" control (a district must always keep exactly one — BR-4); the only way
+ * to change it is to make a secondary the primary, which is gated behind an explaining confirmation.
  */
 @Component({
   selector: 'app-district-detail',
@@ -18,6 +21,7 @@ import { DistrictDetail } from './district.models';
       <section>
         <h3>Primary</h3>
         <p class="primary">★ {{ d.primary.name }}</p>
+        <p class="hint">The primary can’t be removed — make a secondary the primary to replace them.</p>
       </section>
 
       <section>
@@ -25,12 +29,44 @@ import { DistrictDetail } from './district.models';
         @if (d.secondaries.length === 0) {
           <p class="state">No secondaries.</p>
         } @else {
-          <ul class="chips">
+          <ul class="rows">
             @for (s of d.secondaries; track s.id) {
-              <li>{{ s.name }}</li>
+              <li>
+                <span class="who">{{ s.name }}</span>
+                <button type="button" class="link make-primary-btn" [disabled]="saving()"
+                        (click)="confirmingId.set(s.id)">make primary</button>
+                <button type="button" class="link danger remove-btn" [disabled]="saving()"
+                        (click)="removeSecondary.emit(s.id)">remove</button>
+
+                @if (confirmingId() === s.id) {
+                  <div class="confirm" role="alertdialog" aria-label="Confirm change of primary">
+                    <p>
+                      Make {{ s.name }} the primary of {{ d.name }}?
+                      {{ d.primary.name }} will step down and no longer cover this district.
+                    </p>
+                    <button type="button" class="confirm-btn" (click)="onConfirmPrimary(s.id)">Confirm</button>
+                    <button type="button" class="cancel-btn" (click)="confirmingId.set(null)">Cancel</button>
+                  </div>
+                }
+              </li>
             }
           </ul>
         }
+
+        <div class="add">
+          <label>
+            Add secondary
+            <select #sel [disabled]="saving() || available().length === 0"
+                    (change)="selectedToAdd.set(sel.value ? +sel.value : null)">
+              <option value="">Choose…</option>
+              @for (s of available(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </label>
+          <button type="button" class="add-btn" [disabled]="selectedToAdd() === null || saving()"
+                  (click)="onAdd()">Add</button>
+        </div>
       </section>
 
       <section>
@@ -54,6 +90,17 @@ import { DistrictDetail } from './district.models';
     section { margin-bottom: 1rem; }
     h3 { margin: 0 0 0.35rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }
     .primary { margin: 0; font-weight: 600; }
+    .hint { margin: 0.25rem 0 0; font-size: 0.8rem; color: #777; }
+    .rows { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.35rem; }
+    .rows li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
+    .who { flex: 1; }
+    .link { background: none; border: none; padding: 0; color: #35c; cursor: pointer; font: inherit; }
+    .link.danger { color: #c33; }
+    .link:disabled { color: #999; cursor: default; }
+    .confirm { flex-basis: 100%; margin-top: 0.25rem; padding: 0.5rem 0.75rem; border: 1px solid #e0b000;
+      background: #fffbe6; border-radius: 6px; }
+    .confirm p { margin: 0 0 0.5rem; }
+    .add { display: flex; gap: 0.5rem; align-items: end; }
     .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .chips li { padding: 0.2rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 999px; }
     .state { color: #666; }
@@ -62,4 +109,34 @@ import { DistrictDetail } from './district.models';
 export class DistrictDetailPane {
   readonly detail = input<DistrictDetail | null>(null);
   readonly loading = input(false);
+  readonly saving = input(false);
+  readonly salespersons = input<Salesperson[]>([]);
+
+  readonly addSecondary = output<number>();
+  readonly removeSecondary = output<number>();
+  readonly makePrimary = output<number>();
+
+  protected readonly confirmingId = signal<number | null>(null);
+  protected readonly selectedToAdd = signal<number | null>(null);
+
+  /** Salespersons not already the primary or a secondary of this district. */
+  protected readonly available = computed(() => {
+    const d = this.detail();
+    if (!d) return [];
+    const taken = new Set<number>([d.primary.id, ...d.secondaries.map((s) => s.id)]);
+    return this.salespersons().filter((s) => !taken.has(s.id));
+  });
+
+  protected onAdd(): void {
+    const id = this.selectedToAdd();
+    if (id !== null) {
+      this.addSecondary.emit(id);
+      this.selectedToAdd.set(null);
+    }
+  }
+
+  protected onConfirmPrimary(id: number): void {
+    this.makePrimary.emit(id);
+    this.confirmingId.set(null);
+  }
 }

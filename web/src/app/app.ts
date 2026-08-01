@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DistrictDetailPane } from './districts/district-detail-pane';
 import { DistrictList } from './districts/district-list';
-import { DistrictDetail, DistrictSummary } from './districts/district.models';
+import { DistrictDetail, DistrictSummary, Salesperson } from './districts/district.models';
 import { DistrictService } from './districts/district.service';
 
 @Component({
@@ -18,15 +18,12 @@ export class App implements OnInit {
   protected readonly selectedId = signal<number | null>(null);
   protected readonly detail = signal<DistrictDetail | null>(null);
   protected readonly detailLoading = signal(false);
+  protected readonly salespersons = signal<Salesperson[]>([]);
+  protected readonly saving = signal(false);
 
   ngOnInit(): void {
-    this.districtService.list().subscribe({
-      next: (districts) => {
-        this.districts.set(districts);
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+    this.loadList();
+    this.districtService.salespersons().subscribe({ next: (people) => this.salespersons.set(people) });
   }
 
   protected onSelect(id: number): void {
@@ -39,6 +36,52 @@ export class App implements OnInit {
         this.detailLoading.set(false);
       },
       error: () => this.detailLoading.set(false),
+    });
+  }
+
+  protected onAddSecondary(salespersonId: number): void {
+    const d = this.detail();
+    if (d) this.replace(d.primary.id, [...this.secondaryIds(d), salespersonId]);
+  }
+
+  protected onRemoveSecondary(salespersonId: number): void {
+    const d = this.detail();
+    if (d) this.replace(d.primary.id, this.secondaryIds(d).filter((id) => id !== salespersonId));
+  }
+
+  protected onMakePrimary(salespersonId: number): void {
+    const d = this.detail();
+    // New primary; drop it from secondaries. The old primary steps down (it is not kept as a secondary).
+    if (d) this.replace(salespersonId, this.secondaryIds(d).filter((id) => id !== salespersonId));
+  }
+
+  private secondaryIds(detail: DistrictDetail): number[] {
+    return detail.secondaries.map((s) => s.id);
+  }
+
+  private replace(primaryId: number, secondaryIds: number[]): void {
+    const d = this.detail();
+    if (!d) return;
+    this.saving.set(true);
+    this.districtService
+      .putAssignments(d.id, { primaryId, secondaryIds, concurrencyToken: d.concurrencyToken })
+      .subscribe({
+        next: (updated) => {
+          this.detail.set(updated);
+          this.saving.set(false);
+          this.loadList(); // primary name in the list may have changed
+        },
+        error: () => this.saving.set(false), // surfaced to the user in the next step
+      });
+  }
+
+  private loadList(): void {
+    this.districtService.list().subscribe({
+      next: (districts) => {
+        this.districts.set(districts);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
     });
   }
 }

@@ -13,6 +13,14 @@
   </aside>
 
   <section class="pane detail-pane">
-    <app-district-detail [detail]="detail()" [loading]="detailLoading()" />
+    <app-district-detail
+      [detail]="detail()"
+      [loading]="detailLoading()"
+      [saving]="saving()"
+      [salespersons]="salespersons()"
+      (addSecondary)="onAddSecondary($event)"
+      (removeSecondary)="onRemoveSecondary($event)"
+      (makePrimary)="onMakePrimary($event)"
+    />
   </section>
 </main>
