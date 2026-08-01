@@ -49,9 +49,8 @@ public class StoreDistrictRuleTests : IAsyncLifetime
         Skip.IfNot(_sql.IsAvailable, $"{SqlServerFixture.ConnectionStringEnvVar} is not set.");
         await using var conn = await _sql.OpenConnectionAsync();
 
-        var districtId = await conn.QuerySingleAsync<int>(
-            "INSERT INTO dbo.District (Name) VALUES (@name); SELECT CAST(SCOPE_IDENTITY() AS int);",
-            new { name = "North Denmark" });
+        var primaryId = await conn.InsertSalespersonAsync();
+        var districtId = await conn.InsertDistrictAsync("North Denmark", primaryId);
         await conn.ExecuteAsync(
             "INSERT INTO dbo.Store (Name, DistrictId) VALUES (@name, @districtId);",
             new { name = "Aalborg Store", districtId });

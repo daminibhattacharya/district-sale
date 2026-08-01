@@ -7,8 +7,8 @@ namespace Tests.Integration;
 
 /// <summary>
 /// BR-1 — every district has a name. Proven at the database level: each violation is rejected by
-/// a constraint, not merely by the application. A district needs no primary yet at this stage of
-/// the schema, so these tests insert on <c>Name</c> alone.
+/// a constraint, not merely by the application. A district also needs a primary (BR-4), so these
+/// tests create a salesperson first and vary only the <c>Name</c>.
 /// </summary>
 [Collection(SqlServerCollection.Name)]
 [Trait("Category", "Integration")]
@@ -26,9 +26,11 @@ public class DistrictNameRuleTests : IAsyncLifetime
     {
         Skip.IfNot(_sql.IsAvailable, $"{SqlServerFixture.ConnectionStringEnvVar} is not set.");
         await using var conn = await _sql.OpenConnectionAsync();
+        var primaryId = await conn.InsertSalespersonAsync();
 
         await Assert.ThrowsAsync<SqlException>(() => conn.ExecuteAsync(
-            "INSERT INTO dbo.District (Name) VALUES (@name);", new { name = (string?)null }));
+            "INSERT INTO dbo.District (Name, PrimarySalespersonId) VALUES (@name, @primaryId);",
+            new { name = (string?)null, primaryId }));
     }
 
     [SkippableFact]
@@ -36,9 +38,11 @@ public class DistrictNameRuleTests : IAsyncLifetime
     {
         Skip.IfNot(_sql.IsAvailable, $"{SqlServerFixture.ConnectionStringEnvVar} is not set.");
         await using var conn = await _sql.OpenConnectionAsync();
+        var primaryId = await conn.InsertSalespersonAsync();
 
         await Assert.ThrowsAsync<SqlException>(() => conn.ExecuteAsync(
-            "INSERT INTO dbo.District (Name) VALUES (@name);", new { name = "   " }));
+            "INSERT INTO dbo.District (Name, PrimarySalespersonId) VALUES (@name, @primaryId);",
+            new { name = "   ", primaryId }));
     }
 
     [SkippableFact]
@@ -46,11 +50,12 @@ public class DistrictNameRuleTests : IAsyncLifetime
     {
         Skip.IfNot(_sql.IsAvailable, $"{SqlServerFixture.ConnectionStringEnvVar} is not set.");
         await using var conn = await _sql.OpenConnectionAsync();
-
-        await conn.ExecuteAsync("INSERT INTO dbo.District (Name) VALUES (@name);", new { name = "North Denmark" });
+        var primaryId = await conn.InsertSalespersonAsync();
+        await conn.InsertDistrictAsync("North Denmark", primaryId);
 
         var ex = await Assert.ThrowsAsync<SqlException>(() => conn.ExecuteAsync(
-            "INSERT INTO dbo.District (Name) VALUES (@name);", new { name = "North Denmark" }));
+            "INSERT INTO dbo.District (Name, PrimarySalespersonId) VALUES (@name, @primaryId);",
+            new { name = "North Denmark", primaryId }));
         Assert.Equal(2627, ex.Number); // unique constraint violation
     }
 }
