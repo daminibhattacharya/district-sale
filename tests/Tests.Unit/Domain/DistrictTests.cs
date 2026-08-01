@@ -108,4 +108,36 @@ public class DistrictTests
         Assert.DoesNotContain(district.Secondaries, s => s.Id == 3);
         Assert.Contains(district.Secondaries, s => s.Id == 2);
     }
+
+    // ----- RemoveSecondary -----
+
+    [Fact]
+    public void RemoveSecondary_removes_the_salesperson()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2, 3).Build();
+
+        district.RemoveSecondary(2);
+
+        Assert.DoesNotContain(district.Secondaries, s => s.Id == 2);
+        Assert.Contains(district.Secondaries, s => s.Id == 3);
+    }
+
+    [Fact] // BR-4 guard — the primary can never be removed (I1)
+    public void RemoveSecondary_rejects_removing_the_primary()
+    {
+        var district = ADistrict.WithPrimary(1).Build();
+
+        var ex = Assert.Throws<ConflictException>(() => district.RemoveSecondary(1));
+
+        Assert.Equal(1, district.Primary.Id);
+        Assert.Contains("replace the primary instead", ex.Message);
+    }
+
+    [Fact]
+    public void RemoveSecondary_rejects_a_non_member()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2).Build();
+
+        Assert.Throws<NotFoundException>(() => district.RemoveSecondary(99));
+    }
 }

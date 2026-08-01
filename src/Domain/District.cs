@@ -75,4 +75,21 @@ public class District
         _secondaries.RemoveAll(x => x.Id == salesperson.Id); // promote from secondary (I2)
         Primary = salesperson;
     }
+
+    /// <summary>
+    /// Remove a secondary salesperson. Removing the primary is forbidden — a district must always
+    /// keep exactly one primary (I1 / BR-4); replace the primary instead. Removing someone who is
+    /// not a secondary of this district is a not-found.
+    /// </summary>
+    public void RemoveSecondary(int salespersonId)
+    {
+        if (salespersonId == Primary.Id) // BR-4 guard (I1)
+            throw new ConflictException(
+                $"Salesperson {salespersonId} is the primary of district {Id} and cannot be removed; " +
+                "replace the primary instead.");
+
+        if (_secondaries.RemoveAll(x => x.Id == salespersonId) == 0)
+            throw new NotFoundException(
+                $"Salesperson {salespersonId} is not a secondary of district {Id}.");
+    }
 }
