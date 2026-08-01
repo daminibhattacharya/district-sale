@@ -76,3 +76,109 @@ jobs:
       # Vitest + jsdom — headless, no browser needed.
       - name: Unit tests
         run: npm test -- --watch=false
+
+  integration:
+    name: Integration tests (SQL Server)
+    runs-on: ubuntu-latest
+    env:
+      # Throwaway password for the ephemeral, runner-local SQL Server — not a secret.
+      SA_PASSWORD: Str0ng_ci_P@ssw0rd
+      DISTRICT_SQL_TEST: Server=localhost,1433;Database=DistrictSalesTest;User ID=sa;Password=Str0ng_ci_P@ssw0rd;Encrypt=False;TrustServerCertificate=True;
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Start SQL Server
+        run: |
+          docker run -d --name sql \
+            -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$SA_PASSWORD" \
+            -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server and create the test database
+        run: |
+          sqlcmd() {
+            docker run --rm --network host mcr.microsoft.com/mssql-tools:latest \
+              /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "$SA_PASSWORD" "$@"
+          }
+          for i in $(seq 1 40); do
+            if sqlcmd -Q "SELECT 1" >/dev/null 2>&1; then echo "SQL Server ready."; break; fi
+            echo "waiting for SQL Server ($i)…"; sleep 3
+          done
+          sqlcmd -Q "IF DB_ID('DistrictSalesTest') IS NULL CREATE DATABASE DistrictSalesTest;"
+
+      - name: Restore
+        run: dotnet restore district-sale.slnx
+
+      - name: Build
+        run: dotnet build district-sale.slnx --configuration Release --no-restore
+
+      - name: Integration tests
+        run: >
+          dotnet test district-sale.slnx
+          --configuration Release --no-build
+          --filter Category=Integration
+          --logger "trx;LogFileName=integration.trx"
+
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    env:
+      SA_PASSWORD: Str0ng_ci_P@ssw0rd
+      DISTRICT_SQL_TEST: Server=localhost,1433;Database=DistrictSalesTest;User ID=sa;Password=Str0ng_ci_P@ssw0rd;Encrypt=False;TrustServerCertificate=True;
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Start SQL Server
+        run: |
+          docker run -d --name sql \
+            -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$SA_PASSWORD" \
+            -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
+
+      - name: Wait for SQL Server and create the test database
+        run: |
+          sqlcmd() {
+            docker run --rm --network host mcr.microsoft.com/mssql-tools:latest \
+              /opt/mssql-tools/bin/sqlcmd -S localhost,1433 -U sa -P "$SA_PASSWORD" "$@"
+          }
+          for i in $(seq 1 40); do
+            if sqlcmd -Q "SELECT 1" >/dev/null 2>&1; then echo "SQL Server ready."; break; fi
+            echo "waiting for SQL Server ($i)…"; sleep 3
+          done
+          sqlcmd -Q "IF DB_ID('DistrictSalesTest') IS NULL CREATE DATABASE DistrictSalesTest;"
+
+      - name: Install web dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Install e2e dependencies
+        run: npm ci
+        working-directory: e2e
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: e2e
+
+      # Playwright starts the API (which seeds the empty DB) and ng serve, then drives the browser.
+      - name: E2E
+        run: npm test
+        working-directory: e2e
