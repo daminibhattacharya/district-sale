@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  build-and-test:
+    name: Build + unit tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # No ORM allowed: Entity Framework and LINQ-to-SQL are forbidden by the spec.
+      # This is a hard gate — a planted reference fails the build, not an eyeball check.
+      - name: Ban EF / LINQ-to-SQL
+        run: |
+          set -euo pipefail
+          echo "Scanning for forbidden ORM references (EF / LINQ-to-SQL)…"
+          hits=0
+          if grep -rniE 'PackageReference[^>]*Include="(Microsoft\.EntityFrameworkCore|EntityFramework|linq2db|System\.Data\.Linq)' \
+                --include='*.csproj' src tests; then hits=1; fi
+          if grep -rniE '^[[:space:]]*using[[:space:]]+(Microsoft\.EntityFrameworkCore|System\.Data\.Linq|LinqToDB)([.;])' \
+                --include='*.cs' src tests; then hits=1; fi
+          if [ "$hits" -ne 0 ]; then
+            echo "::error::Forbidden ORM reference found. Data access must be native SQL (Dapper is OK)."
+            exit 1
+          fi
+          echo "OK — no EF / LINQ-to-SQL references."
+
+      - name: Restore
+        run: dotnet restore district-sale.slnx
+
+      - name: Build
+        run: dotnet build district-sale.slnx --configuration Release --no-restore
+
+      # Fast tier only in this job. Integration tests need a real SQL Server and run in a
+      # separate job once the database layer lands (see the build plan).
+      - name: Unit tests
+        run: >
+          dotnet test district-sale.slnx
+          --configuration Release --no-build
+          --filter Category=Unit
+          --logger "trx;LogFileName=unit.trx"
