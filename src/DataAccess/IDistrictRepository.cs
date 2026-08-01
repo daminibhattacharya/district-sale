@@ -16,6 +16,12 @@ public interface IDistrictRepository
     /// <summary>The full aggregate — primary, secondaries and stores — or <c>null</c> if unknown.</summary>
     Task<District?> GetByIdAsync(int id, CancellationToken ct = default);
 
+    /// <summary>
+    /// The district's current rowversion (its optimistic-concurrency token), or <c>null</c> if the
+    /// district is unknown. Surfaced so a detail response can hand the client a token to PUT back.
+    /// </summary>
+    Task<byte[]?> GetRowVersionAsync(int districtId, CancellationToken ct = default);
+
     /// <summary>Add a salesperson as a secondary of the district.</summary>
     Task AddSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default);
 

@@ -69,6 +69,15 @@ public sealed class DistrictRepository : IDistrictRepository
         return new District(head.Id, head.Name, new Salesperson(head.PrimaryId, head.PrimaryName), secondaries, stores);
     }
 
+    public async Task<byte[]?> GetRowVersionAsync(int districtId, CancellationToken ct = default)
+    {
+        const string sql = "SELECT RowVersion FROM dbo.District WHERE Id = @districtId;";
+
+        await using var conn = await _connections.CreateOpenConnectionAsync(ct);
+        return await conn.QuerySingleOrDefaultAsync<byte[]>(
+            new CommandDefinition(sql, new { districtId }, cancellationToken: ct));
+    }
+
     public async Task AddSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default)
     {
         const string sql =
