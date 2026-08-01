@@ -16,3 +16,13 @@ public sealed class ConflictException : Exception
 {
     public ConflictException(string message) : base(message) { }
 }
+
+/// <summary>
+/// An optimistic-concurrency check failed: the row was changed by someone else since it was read,
+/// so the supplied rowversion token no longer matches. The caller should reload and retry.
+/// Maps to HTTP 409.
+/// </summary>
+public sealed class ConcurrencyException : Exception
+{
+    public ConcurrencyException(string message) : base(message) { }
+}

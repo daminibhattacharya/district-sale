@@ -25,6 +25,16 @@ public interface IDistrictRepository
     /// <summary>Remove a secondary from the district.</summary>
     Task RemoveSecondaryAsync(int districtId, int salespersonId, CancellationToken ct = default);
 
-    // ReplaceAssignmentsAsync (the PUT full-list replace with an optimistic-concurrency check)
-    // arrives with C22, where its rowversion contract is designed.
+    /// <summary>
+    /// Replace a district's whole assignment set in one transaction — set the primary and make the
+    /// secondaries exactly <paramref name="secondaryIds"/> (a shorter list is how a removal is
+    /// expressed). Guarded by optimistic concurrency: <paramref name="rowVersion"/> must still match
+    /// or a <see cref="Domain.ConcurrencyException"/> is thrown. Returns the district's new rowversion.
+    /// </summary>
+    Task<byte[]> ReplaceAssignmentsAsync(
+        int districtId,
+        int primaryId,
+        IReadOnlyCollection<int> secondaryIds,
+        byte[] rowVersion,
+        CancellationToken ct = default);
 }

@@ -115,6 +115,50 @@ public sealed class DistrictRepository : IDistrictRepository
         await conn.ExecuteAsync(new CommandDefinition(sql, new { districtId, salespersonId }, cancellationToken: ct));
     }
 
+    public async Task<byte[]> ReplaceAssignmentsAsync(
+        int districtId,
+        int primaryId,
+        IReadOnlyCollection<int> secondaryIds,
+        byte[] rowVersion,
+        CancellationToken ct = default)
+    {
+        await using var conn = await _connections.CreateOpenConnectionAsync(ct);
+        await using var tx = await conn.BeginTransactionAsync(ct);
+        try
+        {
+            // Optimistic-concurrency gate: the set-primary write only lands if the token still
+            // matches. Any UPDATE bumps the district's rowversion, so this is also what advances it.
+            var affected = await conn.ExecuteAsync(new CommandDefinition(
+                "UPDATE dbo.District SET PrimarySalespersonId = @primaryId WHERE Id = @districtId AND RowVersion = @rowVersion;",
+                new { districtId, primaryId, rowVersion }, tx, cancellationToken: ct));
+
+            if (affected == 0)
+                throw new ConcurrencyException(
+                    $"District {districtId} was changed by someone else since it was read; reload and retry.");
+
+            // Replace the secondary set wholesale: clear it, then insert the requested list.
+            await conn.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM dbo.DistrictSecondarySalesperson WHERE DistrictId = @districtId;",
+                new { districtId }, tx, cancellationToken: ct));
+
+            if (secondaryIds.Count > 0)
+                await conn.ExecuteAsync(new CommandDefinition(
+                    "INSERT INTO dbo.DistrictSecondarySalesperson (DistrictId, SalespersonId) VALUES (@districtId, @salespersonId);",
+                    secondaryIds.Select(id => new { districtId, salespersonId = id }), tx, cancellationToken: ct));
+
+            var newRowVersion = await conn.ExecuteScalarAsync<byte[]>(new CommandDefinition(
+                "SELECT RowVersion FROM dbo.District WHERE Id = @districtId;",
+                new { districtId }, tx, cancellationToken: ct));
+
+            await tx.CommitAsync(ct);
+            return newRowVersion!;
+        }
+        catch (SqlException ex) when (ex.Number == 547) // FK — a referenced salesperson does not exist
+        {
+            throw new NotFoundException("One or more salespersons in the assignment do not exist.");
+        }
+    }
+
     // Row shapes used only to carry columns from Dapper into domain objects.
     private sealed record SummaryRow(int Id, string Name, int PrimaryId, string PrimaryName, int StoreCount);
     private sealed record HeadRow(int Id, string Name, int PrimaryId, string PrimaryName);
