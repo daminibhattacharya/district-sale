@@ -9,12 +9,12 @@ namespace Api.Contracts;
 /// <see cref="ConcurrencyToken"/> is the rowversion last read for this district (optimistic locking).
 /// </summary>
 public sealed record PutAssignmentsRequest(
-    [property: Range(1, int.MaxValue, ErrorMessage = "primaryId must be a positive salesperson id.")]
+    [Range(1, int.MaxValue, ErrorMessage = "primaryId must be a positive salesperson id.")]
     int PrimaryId,
 
     IReadOnlyList<int>? SecondaryIds,
 
-    [property: Required(ErrorMessage = "concurrencyToken is required.")]
+    [Required(ErrorMessage = "concurrencyToken is required.")]
     string ConcurrencyToken)
 {
     /// <summary>Secondaries as a non-null list — an omitted array means "no secondaries".</summary>
