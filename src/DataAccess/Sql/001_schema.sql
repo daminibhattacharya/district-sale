@@ -7,6 +7,7 @@
 ====================================================================*/
 
 -- Drop in reverse dependency order so the file is freely re-runnable.
+IF OBJECT_ID('dbo.DistrictSecondarySalesperson', 'U') IS NOT NULL DROP TABLE dbo.DistrictSecondarySalesperson;
 IF OBJECT_ID('dbo.Store',       'U') IS NOT NULL DROP TABLE dbo.Store;
 IF OBJECT_ID('dbo.District',    'U') IS NOT NULL DROP TABLE dbo.District;
 IF OBJECT_ID('dbo.Salesperson', 'U') IS NOT NULL DROP TABLE dbo.Salesperson;
@@ -54,3 +55,29 @@ CREATE TABLE dbo.Store
 GO
 CREATE INDEX IX_Store_DistrictId ON dbo.Store (DistrictId);
 GO
+
+-- Only SECONDARY links live here (0..n per district). The primary is the FK column on District,
+-- so there is no Role column and no "which role" ambiguity.
+CREATE TABLE dbo.DistrictSecondarySalesperson
+(
+    DistrictId     INT NOT NULL,
+    SalespersonId  INT NOT NULL,
+
+    -- BR-7: composite PK => a person can't be listed twice as a secondary in the same district.
+    CONSTRAINT PK_DistrictSecondarySalesperson PRIMARY KEY (DistrictId, SalespersonId),
+
+    CONSTRAINT FK_DSS_District
+        FOREIGN KEY (DistrictId) REFERENCES dbo.District (Id) ON DELETE CASCADE,
+    CONSTRAINT FK_DSS_Salesperson
+        FOREIGN KEY (SalespersonId) REFERENCES dbo.Salesperson (Id)
+);
+GO
+CREATE INDEX IX_DSS_SalespersonId ON dbo.DistrictSecondarySalesperson (SalespersonId);
+GO
+
+/*  BR-7, cross-table half — a salesperson can't be BOTH primary and secondary of the SAME district.
+    This compares District.PrimarySalespersonId against a DistrictSecondarySalesperson row for the
+    same DistrictId; a CHECK constraint cannot reference another table, so it is enforced in the
+    domain aggregate (add-secondary rejects the current primary; promoting a secondary drops the
+    secondary row in the same write). The headline rule (BR-4) is a pure constraint here, which is
+    what the brief asks for; this lesser consistency rule is owned by the single write path.  */
