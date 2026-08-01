@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { DistrictDetailPane } from './districts/district-detail-pane';
 import { DistrictList } from './districts/district-list';
@@ -20,6 +21,7 @@ export class App implements OnInit {
   protected readonly detailLoading = signal(false);
   protected readonly salespersons = signal<Salesperson[]>([]);
   protected readonly saving = signal(false);
+  protected readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
     this.loadList();
@@ -29,13 +31,17 @@ export class App implements OnInit {
   protected onSelect(id: number): void {
     this.selectedId.set(id);
     this.detail.set(null);
+    this.error.set(null);
     this.detailLoading.set(true);
     this.districtService.detail(id).subscribe({
       next: (detail) => {
         this.detail.set(detail);
         this.detailLoading.set(false);
       },
-      error: () => this.detailLoading.set(false),
+      error: (err) => {
+        this.error.set(this.toMessage(err));
+        this.detailLoading.set(false);
+      },
     });
   }
 
@@ -62,6 +68,7 @@ export class App implements OnInit {
   private replace(primaryId: number, secondaryIds: number[]): void {
     const d = this.detail();
     if (!d) return;
+    this.error.set(null);
     this.saving.set(true);
     this.districtService
       .putAssignments(d.id, { primaryId, secondaryIds, concurrencyToken: d.concurrencyToken })
@@ -71,8 +78,20 @@ export class App implements OnInit {
           this.saving.set(false);
           this.loadList(); // primary name in the list may have changed
         },
-        error: () => this.saving.set(false), // surfaced to the user in the next step
+        error: (err) => {
+          this.error.set(this.toMessage(err));
+          this.saving.set(false);
+        },
       });
+  }
+
+  /** Pull the human message out of an RFC 9457 ProblemDetails body, with sane fallbacks. */
+  private toMessage(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      const body = err.error as { detail?: string; title?: string } | null;
+      return body?.detail ?? body?.title ?? err.message;
+    }
+    return 'Something went wrong. Please try again.';
   }
 
   private loadList(): void {

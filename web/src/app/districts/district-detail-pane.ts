@@ -13,6 +13,13 @@ import { DistrictDetail, Salesperson } from './district.models';
   selector: 'app-district-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    @if (error(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+    @if (saving()) {
+      <p class="saving" role="status" aria-live="polite">Saving…</p>
+    }
+
     @if (loading()) {
       <p class="state" role="status">Loading…</p>
     } @else if (detail(); as d) {
@@ -104,12 +111,16 @@ import { DistrictDetail, Salesperson } from './district.models';
     .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
     .chips li { padding: 0.2rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 999px; }
     .state { color: #666; }
+    .error { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border: 1px solid #c33;
+      background: #fdeaea; color: #a11; border-radius: 6px; }
+    .saving { margin: 0 0 0.5rem; color: #35c; font-size: 0.85rem; }
   `,
 })
 export class DistrictDetailPane {
   readonly detail = input<DistrictDetail | null>(null);
   readonly loading = input(false);
   readonly saving = input(false);
+  readonly error = input<string | null>(null);
   readonly salespersons = input<Salesperson[]>([]);
 
   readonly addSecondary = output<number>();

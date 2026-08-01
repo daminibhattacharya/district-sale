@@ -113,4 +113,38 @@ describe('DistrictDetailPane', () => {
     expect(dom.querySelectorAll('.remove-btn').length).toBe(1);
     expect(dom.textContent).toContain('be removed'); // the "primary can't be removed" hint
   });
+
+  it('announces the error message in an alert region', () => {
+    const fixture = setup();
+    fixture.componentRef.setInput('error', 'The district was changed by someone else. Reload and try again.');
+    fixture.detectChanges();
+
+    const alert = el(fixture).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('changed by someone else');
+  });
+
+  it('shows a saving status while a change is in flight', () => {
+    const fixture = setup();
+    fixture.componentRef.setInput('saving', true);
+    fixture.detectChanges();
+
+    const status = el(fixture).querySelector('.saving');
+    expect(status?.getAttribute('role')).toBe('status');
+    expect(status?.textContent).toContain('Saving');
+  });
+
+  it('shows neither an error nor a saving status by default', () => {
+    const dom = el(setup());
+    expect(dom.querySelector('[role="alert"]')).toBeNull();
+    expect(dom.querySelector('.saving')).toBeNull();
+  });
+
+  it('exposes the mutation controls as keyboard-operable buttons', () => {
+    const dom = el(setup());
+    for (const cls of ['.make-primary-btn', '.remove-btn', '.add-btn']) {
+      const btn = dom.querySelector(cls);
+      expect(btn?.tagName).toBe('BUTTON'); // native button => focusable, Enter/Space activate it
+      expect(btn?.getAttribute('type')).toBe('button');
+    }
+  });
 });

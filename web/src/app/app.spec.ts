@@ -1,5 +1,6 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { vi } from 'vitest';
 import { App } from './app';
 import { DistrictDetail, DistrictSummary, Salesperson } from './districts/district.models';
@@ -75,5 +76,37 @@ describe('App', () => {
       secondaryIds: [],
       concurrencyToken: 'AAAAAAAAB9E=',
     });
+  });
+
+  it('surfaces the server message when a mutation fails on a stale token (409)', async () => {
+    const { fixture, service } = setup();
+    service.putAssignments.mockReturnValue(
+      throwError(() => new HttpErrorResponse({
+        status: 409,
+        error: { title: 'Conflict', detail: 'The district was changed by someone else. Reload and try again.' },
+      })),
+    );
+    await selectFirstDistrict(fixture);
+
+    el(fixture).querySelector<HTMLButtonElement>('.remove-btn')!.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const alert = el(fixture).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('changed by someone else');
+  });
+
+  it('surfaces the server message when the detail fails to load', async () => {
+    const { fixture, service } = setup();
+    service.detail.mockReturnValue(
+      throwError(() => new HttpErrorResponse({
+        status: 500,
+        error: { title: 'Error', detail: 'The district could not be loaded.' },
+      })),
+    );
+    await selectFirstDistrict(fixture);
+
+    const alert = el(fixture).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('could not be loaded');
   });
 });
