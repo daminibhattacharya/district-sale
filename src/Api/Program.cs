@@ -1,4 +1,7 @@
 using Api.Infrastructure;
+using Api.Services;
+using DataAccess;
+using Microsoft.Extensions.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +14,14 @@ builder.Services.AddOpenApi();
 // RFC 9457 Problem Details for all errors; typed domain exceptions → status codes (with a traceId).
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ProblemExceptionHandler>();
+
+// Data access + services. The connection string is read from config at resolve time (never
+// hard-coded) — 'ConnectionStrings:Sql' points the app at its database.
+builder.Services.AddSingleton<IDbConnectionFactory>(sp =>
+    new SqlConnectionFactory(sp.GetRequiredService<IConfiguration>().GetConnectionString("Sql")!));
+builder.Services.AddScoped<IDistrictRepository, DistrictRepository>();
+builder.Services.AddScoped<ISalespersonRepository, SalespersonRepository>();
+builder.Services.AddScoped<IDistrictService, DistrictService>();
 
 var app = builder.Build();
 
@@ -29,3 +40,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Exposed so the integration tier can host the API in-process (WebApplicationFactory<Program>).
+public partial class Program;
