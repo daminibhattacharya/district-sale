@@ -51,3 +51,28 @@ jobs:
           --configuration Release --no-build
           --filter Category=Unit
           --logger "trx;LogFileName=unit.trx"
+
+  web:
+    name: Web unit tests (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Angular's toolchain requires Node 22/24/26 — not the odd-numbered 23.
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # Vitest + jsdom — headless, no browser needed.
+      - name: Unit tests
+        run: npm test -- --watch=false
