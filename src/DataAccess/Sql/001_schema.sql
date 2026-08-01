@@ -26,6 +26,7 @@ CREATE TABLE dbo.District
     Id                    INT           IDENTITY(1,1) NOT NULL,
     Name                  NVARCHAR(100)               NOT NULL,   -- BR-1: every district has a name
     PrimarySalespersonId  INT                         NOT NULL,   -- BR-4: always exactly one primary
+    RowVersion            ROWVERSION,                             -- optimistic-concurrency token
 
     CONSTRAINT PK_District               PRIMARY KEY (Id),
     CONSTRAINT UQ_District_Name          UNIQUE (Name),           -- names don't repeat
