@@ -31,6 +31,14 @@ builder.Services.AddSingleton<IDbConnectionFactory>(sp =>
 builder.Services.AddScoped<IDistrictRepository, DistrictRepository>();
 builder.Services.AddScoped<ISalespersonRepository, SalespersonRepository>();
 builder.Services.AddScoped<IDistrictService, DistrictService>();
+builder.Services.AddScoped<DbInitializer>();
+
+// Dev-only: let the Angular dev server (its own origin) call the API cross-origin.
+const string DevClientCors = "dev-client";
+builder.Services.AddCors(options => options.AddPolicy(DevClientCors, policy => policy
+    .WithOrigins("http://localhost:4200")
+    .AllowAnyHeader()
+    .AllowAnyMethod()));
 
 var app = builder.Build();
 
@@ -42,9 +50,16 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-}
+    app.UseCors(DevClientCors);
 
-app.UseHttpsRedirection();
+    // Bring an empty database up to a runnable, seeded state (idempotent). Development only.
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<DbInitializer>().EnsureSeededAsync();
+}
+else
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthorization();
 
