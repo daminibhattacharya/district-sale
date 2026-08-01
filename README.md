@@ -48,6 +48,9 @@ dotnet test --filter Category=Integration   # requires DISTRICT_SQL_TEST
   tests (Respawn), so seed loaded at startup would be wiped before the first test. `010_seed.sql` is
   therefore kept out of the schema scripts and applied explicitly (`ApplySeedAsync`) by the tests that
   need it. The script is re-runnable (clears then re-inserts) so repeated application is a no-op.
+- **All datetimes are UTC.** The API exposes no local times. The only datetime on the wire today is
+  the `/health` timestamp; it is `DateTime.UtcNow` and serialized with a trailing `Z`, asserted by a
+  contract test. Any future timestamp follows the same rule.
 
 ## Definition of done
 
