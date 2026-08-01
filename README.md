@@ -38,7 +38,16 @@ dotnet test --filter Category=Integration   # requires DISTRICT_SQL_TEST
 
 *A living record of choices made and why — updated as the build proceeds.*
 
-- _(to be filled in)_
+- **BR-3 (every salesperson belongs to ≥1 district) is seed-guaranteed, not constraint-enforced.**
+  A salesperson is "in" a district by being its primary (a column on `District`) or by a row in
+  `DistrictSecondarySalesperson`. "Referenced by at least one of two other tables" is not something a
+  column constraint can express, and a trigger enforcing it would block the legitimate intermediate
+  state of creating a salesperson before assigning them. So the rule is upheld by the seed data and
+  pinned by an assertion test (`SeedDataTests`), rather than by the schema.
+- **Seed is applied on demand, not at startup.** The integration harness resets every table between
+  tests (Respawn), so seed loaded at startup would be wiped before the first test. `010_seed.sql` is
+  therefore kept out of the schema scripts and applied explicitly (`ApplySeedAsync`) by the tests that
+  need it. The script is re-runnable (clears then re-inserts) so repeated application is a no-op.
 
 ## Definition of done
 

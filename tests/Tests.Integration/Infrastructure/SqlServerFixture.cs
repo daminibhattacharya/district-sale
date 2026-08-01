@@ -59,22 +59,46 @@ public sealed partial class SqlServerFixture : IAsyncLifetime
         await _respawner.ResetAsync(connection);
     }
 
+    /// <summary>
+    /// Apply the re-runnable seed script(s) on demand. Seed is deliberately kept out of the
+    /// startup schema (Respawn empties every table before each test, so init-time seed would just
+    /// be wiped) — a test that needs the fixtures calls this after <see cref="ResetAsync"/>.
+    /// </summary>
+    public async Task ApplySeedAsync()
+    {
+        await using var connection = await OpenConnectionAsync();
+        foreach (var path in Scripts(IsSeed))
+            await RunScriptAsync(connection, path);
+    }
+
     public Task DisposeAsync() => Task.CompletedTask;
 
     private async Task ApplySchemaAsync()
     {
-        var scriptsDir = Path.Combine(AppContext.BaseDirectory, "Sql");
-        var scripts = Directory.GetFiles(scriptsDir, "*.sql").OrderBy(f => f, StringComparer.Ordinal);
-
         await using var connection = await OpenConnectionAsync();
-        foreach (var path in scripts)
+        foreach (var path in Scripts(path => !IsSeed(path)))
+            await RunScriptAsync(connection, path);
+    }
+
+    // Ordered .sql files under the output Sql/ folder matching the given predicate.
+    private static IEnumerable<string> Scripts(Func<string, bool> predicate)
+    {
+        var scriptsDir = Path.Combine(AppContext.BaseDirectory, "Sql");
+        return Directory.GetFiles(scriptsDir, "*.sql")
+            .Where(predicate)
+            .OrderBy(f => f, StringComparer.Ordinal);
+    }
+
+    private static bool IsSeed(string path) =>
+        Path.GetFileName(path).Contains("seed", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task RunScriptAsync(SqlConnection connection, string path)
+    {
+        var script = await File.ReadAllTextAsync(path);
+        foreach (var batch in GoSeparator().Split(script))
         {
-            var script = await File.ReadAllTextAsync(path);
-            foreach (var batch in GoSeparator().Split(script))
-            {
-                if (!string.IsNullOrWhiteSpace(batch))
-                    await connection.ExecuteAsync(batch);
-            }
+            if (!string.IsNullOrWhiteSpace(batch))
+                await connection.ExecuteAsync(batch);
         }
     }
 
