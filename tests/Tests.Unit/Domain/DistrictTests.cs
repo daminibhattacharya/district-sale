@@ -61,4 +61,51 @@ public class DistrictTests
         Assert.Empty(district.Secondaries);
         Assert.Contains("already the primary", ex.Message);
     }
+
+    // ----- SetPrimary (the swap) -----
+
+    [Fact]
+    public void SetPrimary_replaces_the_primary_and_the_old_primary_drops_out()
+    {
+        var district = ADistrict.WithPrimary(1).Build();
+
+        district.SetPrimary(ADistrict.Person(2));
+
+        Assert.Equal(2, district.Primary.Id);
+        Assert.DoesNotContain(district.Secondaries, s => s.Id == 1); // old primary not auto-demoted
+    }
+
+    [Fact]
+    public void SetPrimary_promoting_a_secondary_removes_them_from_secondaries()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2).Build();
+
+        district.SetPrimary(ADistrict.Person(2));
+
+        Assert.Equal(2, district.Primary.Id);
+        Assert.DoesNotContain(district.Secondaries, s => s.Id == 2); // no dual role (I2)
+    }
+
+    [Fact]
+    public void SetPrimary_to_the_current_primary_is_a_no_op()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2).Build();
+
+        district.SetPrimary(ADistrict.Person(1));
+
+        Assert.Equal(1, district.Primary.Id);
+        Assert.Single(district.Secondaries); // secondary 2 untouched
+    }
+
+    [Fact] // BR-4 / I1 — after a swap there is still exactly one primary
+    public void SetPrimary_keeps_exactly_one_primary()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2, 3).Build();
+
+        district.SetPrimary(ADistrict.Person(3));
+
+        Assert.Equal(3, district.Primary.Id);
+        Assert.DoesNotContain(district.Secondaries, s => s.Id == 3);
+        Assert.Contains(district.Secondaries, s => s.Id == 2);
+    }
 }
