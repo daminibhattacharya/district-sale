@@ -1,23 +1,34 @@
 import { TestBed } from '@angular/core/testing';
+import { Observable, of } from 'rxjs';
 import { App } from './app';
+import { DistrictSummary } from './districts/district.models';
+import { DistrictService } from './districts/district.service';
 
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  const districts: DistrictSummary[] = [
+    { id: 1, name: 'North Denmark', primary: { id: 1, name: 'Anna' }, storeCount: 4 },
+  ];
+
+  function setup(list: Observable<DistrictSummary[]> = of(districts)) {
+    TestBed.configureTestingModule({
       imports: [App],
-    }).compileComponents();
+      providers: [{ provide: DistrictService, useValue: { list: () => list } }],
+    });
+    const fixture = TestBed.createComponent(App);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('creates the app', () => {
+    expect(setup().componentInstance).toBeTruthy();
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
+  it('loads districts from the service and renders them', async () => {
+    const fixture = setup();
     await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, web');
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('North Denmark');
+    expect(text).toContain('Anna');
   });
 });
