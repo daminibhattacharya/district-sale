@@ -28,6 +28,7 @@ export default defineConfig({
         ASPNETCORE_ENVIRONMENT: 'Development',
         ASPNETCORE_URLS: apiUrl,
         ConnectionStrings__Sql: process.env.DISTRICT_SQL_TEST ?? '',
+        Seed__OnStartup: 'true', // this run uses --no-launch-profile, so opt in explicitly
       },
     },
     {

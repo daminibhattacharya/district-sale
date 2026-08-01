@@ -52,9 +52,14 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseCors(DevClientCors);
 
-    // Bring an empty database up to a runnable, seeded state (idempotent). Development only.
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<DbInitializer>().EnsureSeededAsync();
+    // Bring an empty database up to a runnable, seeded state (idempotent). Opt-in via
+    // 'Seed:OnStartup' so it fires for real runs (dotnet run / the E2E) but NOT for the in-process
+    // test host (WebApplicationFactory), whose contract tests use a placeholder connection string.
+    if (app.Configuration.GetValue<bool>("Seed:OnStartup"))
+    {
+        using var scope = app.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<DbInitializer>().EnsureSeededAsync();
+    }
 }
 else
 {
