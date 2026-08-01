@@ -27,4 +27,38 @@ public class DistrictTests
         Assert.Throws<ArgumentException>(
             () => new District(1, "  ", ADistrict.Person(1)));
     }
+
+    // ----- AddSecondary -----
+
+    [Fact]
+    public void AddSecondary_adds_the_salesperson_to_secondaries()
+    {
+        var district = ADistrict.WithPrimary(1).Build();
+
+        district.AddSecondary(ADistrict.Person(2));
+
+        Assert.Contains(district.Secondaries, s => s.Id == 2);
+    }
+
+    [Fact]
+    public void AddSecondary_rejects_a_duplicate_secondary()
+    {
+        var district = ADistrict.WithPrimary(1).WithSecondaries(2).Build();
+
+        var ex = Assert.Throws<ConflictException>(() => district.AddSecondary(ADistrict.Person(2)));
+
+        Assert.Single(district.Secondaries);
+        Assert.Contains("already a secondary", ex.Message);
+    }
+
+    [Fact] // BR-7: a salesperson can't be both primary and secondary in the same district
+    public void AddSecondary_rejects_the_current_primary()
+    {
+        var district = ADistrict.WithPrimary(1).Build();
+
+        var ex = Assert.Throws<ConflictException>(() => district.AddSecondary(ADistrict.Person(1)));
+
+        Assert.Empty(district.Secondaries);
+        Assert.Contains("already the primary", ex.Message);
+    }
 }

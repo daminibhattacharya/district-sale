@@ -6,7 +6,9 @@ namespace Domain;
 /// schema enforces the same rules as a backstop (defense in depth).
 ///
 /// Invariants held at all times:
-///   I1  exactly one primary salesperson (<see cref="Primary"/> is never null) — BR-4.
+///   I1  exactly one primary salesperson (<see cref="Primary"/> is never null) — BR-4;
+///   I2  nobody is both the primary and a secondary of this district — BR-7;
+///   I3  a salesperson appears at most once as a secondary.
 /// </summary>
 public class District
 {
@@ -38,5 +40,21 @@ public class District
         Primary = primary;
         _secondaries = secondaries?.ToList() ?? new List<Salesperson>();
         _stores = stores?.ToList() ?? new List<Store>();
+    }
+
+    /// <summary>Add a salesperson as a secondary of this district.</summary>
+    public void AddSecondary(Salesperson salesperson)
+    {
+        ArgumentNullException.ThrowIfNull(salesperson);
+
+        if (salesperson.Id == Primary.Id) // BR-7 — no dual role (I2)
+            throw new ConflictException(
+                $"Salesperson {salesperson.Id} is already the primary of district {Id}.");
+
+        if (_secondaries.Any(x => x.Id == salesperson.Id)) // no duplicate (I3)
+            throw new ConflictException(
+                $"Salesperson {salesperson.Id} is already a secondary of district {Id}.");
+
+        _secondaries.Add(salesperson);
     }
 }
