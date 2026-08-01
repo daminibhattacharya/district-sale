@@ -1,0 +1,7 @@
+@Api_HostAddress = http://localhost:5091
+
+# Endpoints are added as the API grows (see the build plan).
+GET {{Api_HostAddress}}/api/v1/districts
+Accept: application/json
+
+###
