@@ -2,8 +2,17 @@ using Api.Infrastructure;
 using Api.Services;
 using DataAccess;
 using Microsoft.Extensions.Configuration;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Structured logging (Serilog) with correlation-id enrichment from the log context.
+builder.Services.AddSerilog((services, lc) => lc
+    .ReadFrom.Configuration(builder.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext()
+    .WriteTo.Console(outputTemplate:
+        "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}"));
 
 // Add services to the container.
 
@@ -25,6 +34,8 @@ builder.Services.AddScoped<IDistrictService, DistrictService>();
 
 var app = builder.Build();
 
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
