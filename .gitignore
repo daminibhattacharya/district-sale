@@ -1,0 +1,51 @@
+# ── .NET ─────────────────────────────────────────────────────────────
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]uild/
+[Oo]ut/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+project.lock.json
+artifacts/
+TestResults/
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
+BenchmarkDotNet.Artifacts/
+
+# Rider / VS Code
+.idea/
+*.DotSettings.user
+.vscode/*
+!.vscode/extensions.json
+
+# ── Secrets / local config (never commit) ────────────────────────────
+appsettings.*.local.json
+*.local.json
+secrets.json
+.env
+.env.*
+
+# ── Node / Angular ───────────────────────────────────────────────────
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+.playwright/
+playwright-report/
+test-results/
+
+# ── OS ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

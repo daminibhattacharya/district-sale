@@ -1,2 +1,51 @@
-# district-sale
-Tracking salesperson through districts
+# District / Salesperson Management
+
+Shows which salespersons cover which sales districts (and the stores in them), and lets a
+user change that coverage — add or remove salespersons and change who is in charge —
+without calling IT.
+
+Built **test-first** (bottom-up), with the business rules enforced in the database wherever
+possible and a passing test at every layer.
+
+**Stack:** SQL Server · ASP.NET Core + Dapper (native SQL, no ORM) · Angular · xUnit + Moq ·
+Serilog · GitHub Actions CI.
+
+## Status
+
+🚧 Under construction — see the build progresses as a series of atomic commits.
+
+## How to run
+
+> Filled in as the pieces land.
+
+### Prerequisites
+- .NET SDK 10
+- A SQL Server instance (connection string supplied via config — see below)
+- Node 22 LTS + npm (for the Angular client)
+
+### Configuration
+- **API:** connection string via `ConnectionStrings__Sql` (environment variable or user-secrets — no secrets in Git).
+- **Integration tests:** point `DISTRICT_SQL_TEST` at a throwaway test database.
+
+### Build & test
+```bash
+dotnet build
+dotnet test --filter Category=Unit          # fast, no database
+dotnet test --filter Category=Integration   # requires DISTRICT_SQL_TEST
+```
+
+## Decisions & trade-offs
+
+*A living record of choices made and why — updated as the build proceeds.*
+
+- _(to be filled in)_
+
+## Definition of done
+
+- [ ] Schema scripts in Git; every business rule enforced by a constraint or documented + test-covered
+- [ ] Seed data covers the edge cases and is re-runnable
+- [ ] API complete: JSON, UTC, versioned, ProblemDetails errors, optimistic concurrency, health endpoint
+- [ ] No EF or LINQ-to-SQL anywhere — verified by a CI check
+- [ ] Angular client complete; loading / empty / error states handled
+- [ ] At least one passing test in every tier; business rules at full coverage
+- [ ] CI green on a clean clone
