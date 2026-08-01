@@ -55,4 +55,19 @@ public class DistrictPrimaryRuleTests : IAsyncLifetime
 
         Assert.True(districtId > 0);
     }
+
+    [SkippableFact] // BR-6: the same salesperson may be primary of several districts (staff shortages).
+    public async Task The_same_salesperson_may_be_primary_of_two_districts()
+    {
+        Skip.IfNot(_sql.IsAvailable, $"{SqlServerFixture.ConnectionStringEnvVar} is not set.");
+        await using var conn = await _sql.OpenConnectionAsync();
+
+        var alice = await conn.InsertSalespersonAsync("Alice");
+        await conn.InsertDistrictAsync("North Denmark", alice);
+        await conn.InsertDistrictAsync("Southern Denmark", alice); // must be allowed — no UNIQUE on the column
+
+        var districtsLedByAlice = await conn.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM dbo.District WHERE PrimarySalespersonId = @alice;", new { alice });
+        Assert.Equal(2, districtsLedByAlice);
+    }
 }
