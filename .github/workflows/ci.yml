@@ -2,9 +2,15 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches:
+      - '**'
   pull_request:
-    branches: ['**']
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+  checks: write
 
 jobs:
   build-and-test:
@@ -13,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -52,6 +58,15 @@ jobs:
           --filter Category=Unit
           --logger "trx;LogFileName=unit.trx"
 
+      - name: Publish unit test report
+        uses: dorny/test-reporter@v3
+        if: always()
+        continue-on-error: true
+        with:
+          name: Unit test results
+          path: '**/unit.trx'
+          reporter: dotnet-trx
+
   web:
     name: Web unit tests (Angular)
     runs-on: ubuntu-latest
@@ -60,11 +75,11 @@ jobs:
         working-directory: web
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Angular's toolchain requires Node 22/24/26 — not the odd-numbered 23.
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -86,10 +101,10 @@ jobs:
       DISTRICT_SQL_TEST: Server=localhost,1433;Database=DistrictSalesTest;User ID=sa;Password=Str0ng_ci_P@ssw0rd;Encrypt=False;TrustServerCertificate=True;
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
@@ -124,6 +139,15 @@ jobs:
           --filter Category=Integration
           --logger "trx;LogFileName=integration.trx"
 
+      - name: Publish integration test report
+        uses: dorny/test-reporter@v3
+        if: always()
+        continue-on-error: true
+        with:
+          name: Integration test results
+          path: '**/integration.trx'
+          reporter: dotnet-trx
+
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
@@ -132,15 +156,15 @@ jobs:
       DISTRICT_SQL_TEST: Server=localhost,1433;Database=DistrictSalesTest;User ID=sa;Password=Str0ng_ci_P@ssw0rd;Encrypt=False;TrustServerCertificate=True;
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
 
       - name: Setup Node 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -182,3 +206,11 @@ jobs:
       - name: E2E
         run: npm test
         working-directory: e2e
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: playwright-report
+          path: e2e/playwright-report
+          retention-days: 7
