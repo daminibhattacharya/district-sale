@@ -4,10 +4,11 @@ import { DistrictDetailPane } from './districts/district-detail-pane';
 import { DistrictList } from './districts/district-list';
 import { DistrictDetail, DistrictSummary, Salesperson } from './districts/district.models';
 import { DistrictService } from './districts/district.service';
+import { ThemeToggle } from './theme/theme-toggle';
 
 @Component({
   selector: 'app-root',
-  imports: [DistrictList, DistrictDetailPane],
+  imports: [DistrictList, DistrictDetailPane, ThemeToggle],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

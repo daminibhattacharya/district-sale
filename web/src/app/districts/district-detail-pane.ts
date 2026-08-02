@@ -95,25 +95,25 @@ import { DistrictDetail, Salesperson } from './district.models';
   styles: `
     .name { margin-top: 0; }
     section { margin-bottom: 1rem; }
-    h3 { margin: 0 0 0.35rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: #555; }
+    h3 { margin: 0 0 0.35rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
     .primary { margin: 0; font-weight: 600; }
-    .hint { margin: 0.25rem 0 0; font-size: 0.8rem; color: #777; }
+    .hint { margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--muted); }
     .rows { list-style: none; margin: 0 0 0.5rem; padding: 0; display: grid; gap: 0.35rem; }
     .rows li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem; }
     .who { flex: 1; }
-    .link { background: none; border: none; padding: 0; color: #35c; cursor: pointer; font: inherit; }
-    .link.danger { color: #c33; }
-    .link:disabled { color: #999; cursor: default; }
-    .confirm { flex-basis: 100%; margin-top: 0.25rem; padding: 0.5rem 0.75rem; border: 1px solid #e0b000;
-      background: #fffbe6; border-radius: 6px; }
+    .link { background: none; border: none; padding: 0; color: var(--link); cursor: pointer; font: inherit; }
+    .link.danger { color: var(--danger); }
+    .link:disabled { color: var(--link-disabled); cursor: default; }
+    .confirm { flex-basis: 100%; margin-top: 0.25rem; padding: 0.5rem 0.75rem; border: 1px solid var(--confirm-border);
+      background: var(--confirm-bg); border-radius: 6px; }
     .confirm p { margin: 0 0 0.5rem; }
     .add { display: flex; gap: 0.5rem; align-items: end; }
     .chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-    .chips li { padding: 0.2rem 0.6rem; border: 1px solid rgba(0, 0, 0, 0.15); border-radius: 999px; }
-    .state { color: #666; }
-    .error { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border: 1px solid #c33;
-      background: #fdeaea; color: #a11; border-radius: 6px; }
-    .saving { margin: 0 0 0.5rem; color: #35c; font-size: 0.85rem; }
+    .chips li { padding: 0.2rem 0.6rem; border: 1px solid var(--border-strong); border-radius: 999px; }
+    .state { color: var(--muted-2); }
+    .error { margin: 0 0 0.75rem; padding: 0.5rem 0.75rem; border: 1px solid var(--error-border);
+      background: var(--error-bg); color: var(--error-fg); border-radius: 6px; }
+    .saving { margin: 0 0 0.5rem; color: var(--link); font-size: 0.85rem; }
   `,
 })
 export class DistrictDetailPane {

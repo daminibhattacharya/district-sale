@@ -37,11 +37,11 @@ import { DistrictSummary } from './district.models';
     .districts { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.25rem; }
     .district { display: flex; gap: 0.75rem; align-items: baseline; width: 100%; text-align: left;
       padding: 0.5rem 0.75rem; background: none; border: 1px solid transparent; border-radius: 6px; cursor: pointer; }
-    .district:hover { background: rgba(0, 0, 0, 0.04); }
+    .district:hover { background: var(--hover-bg); }
     .district.selected { border-color: currentColor; font-weight: 600; }
     .name { flex: 1; }
-    .primary, .stores { color: #555; font-size: 0.9em; }
-    .state { color: #666; }
+    .primary, .stores { color: var(--muted); font-size: 0.9em; }
+    .state { color: var(--muted-2); }
   `,
 })
 export class DistrictList {
