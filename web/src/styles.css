@@ -1,0 +1,50 @@
+/* You can add global styles to this file, and also import other style files */
+
+/*
+ * Theme tokens. Components reference these variables instead of hard-coded colours; the ThemeService
+ * flips `data-theme` on <html>, which swaps the values below. Light is the default (:root).
+ */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #555555;
+  --muted-2: #666666;
+  --border: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --link: #3355cc;
+  --link-disabled: #999999;
+  --danger: #cc3333;
+  --confirm-border: #e0b000;
+  --confirm-bg: #fffbe6;
+  --error-border: #cc3333;
+  --error-bg: #fdeaea;
+  --error-fg: #aa1111;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #16181c;
+  --fg: #e6e6e6;
+  --muted: #b3b3b3;
+  --muted-2: #a3a3a3;
+  --border: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.22);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --link: #7aa2ff;
+  --link-disabled: #666666;
+  --danger: #ff6b6b;
+  --confirm-border: #b38f00;
+  --confirm-bg: #2a2410;
+  --error-border: #ff6b6b;
+  --error-bg: #2a1414;
+  --error-fg: #ff9a9a;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}

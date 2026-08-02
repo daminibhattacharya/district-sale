@@ -1,0 +1,28 @@
+<header class="app-header">
+  <h1>Sales Districts</h1>
+  <app-theme-toggle />
+</header>
+
+<main class="app-main">
+  <aside class="pane list-pane">
+    <app-district-list
+      [districts]="districts()"
+      [loading]="loading()"
+      [selectedId]="selectedId()"
+      (select)="onSelect($event)"
+    />
+  </aside>
+
+  <section class="pane detail-pane">
+    <app-district-detail
+      [detail]="detail()"
+      [loading]="detailLoading()"
+      [saving]="saving()"
+      [error]="error()"
+      [salespersons]="salespersons()"
+      (addSecondary)="onAddSecondary($event)"
+      (removeSecondary)="onRemoveSecondary($event)"
+      (makePrimary)="onMakePrimary($event)"
+    />
+  </section>
+</main>
